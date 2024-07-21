@@ -19,6 +19,8 @@ int main(int argc, char* argv[])
 	}
 	
 	chip8.draw = true;
+
+
 	
 	srand(time(NULL)); // Get seed for random number
 
@@ -35,8 +37,10 @@ int main(int argc, char* argv[])
 			update_screen(sfml, config, chip8);
 			chip8.draw = false;
 		}
+
+		update_timers(chip8);
 	}
 	
-
+	
 	return 0;
 }

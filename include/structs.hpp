@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 
 enum
 {
@@ -12,7 +13,7 @@ enum
 struct sfml_t
 {
 	sf::RenderWindow window;
-
+	//sf::Sound sound;
 };
 
 // Configuration for the display
@@ -28,9 +29,8 @@ struct config_t
 
 struct registers_t
 {
-	uint16_t I;		 // index register
-	uint8_t V[16]; // V0-VF registers
-
+	uint16_t I;					 // index register
+	std::array<uint8_t, 16> V;   // V0-VF registers
 };
 
 struct instruction_t
@@ -46,16 +46,15 @@ struct instruction_t
 // The chip8's internals
 struct chip8_t
 {
-	uint8_t ram[4096];		// 4kb of RAM
-	bool display[64 * 32];	// display pixels (1 = Pixel on, 0 = Pixel off)
-	//bool display[64][32];
-	uint16_t stack[12];	// 42 Bytes of stack memory 
+	std::array<uint8_t, 4096> ram;		// 4kb of RAM
+	std::array<bool, 64 * 32> display;	// display pixels (1 = Pixel on, 0 = Pixel off)
+	std::array<uint16_t, 12> stack;		// stack with 12 subroutines
 	uint16_t* stack_ptr;
 	uint32_t PC;
-	instruction_t inst;		// Currently running opcode
+	instruction_t inst;					// Currently running opcode
 	registers_t regs;
 	uint8_t status;
-	bool keypad[16];
+	std::array<bool, 16> keypad;
 	uint8_t delay_timer;
 	uint8_t sound_timer;
 	bool draw;

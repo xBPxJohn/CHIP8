@@ -1,7 +1,6 @@
 #pragma once
 
 
-
 void init_config(config_t& config)
 {
 	// Default settings
@@ -102,7 +101,7 @@ bool init_chip8(chip8_t& chip8, config_t config)
 
 
 	// Clear Display buffer
-	memset(&chip8.display[0], false, sizeof(chip8.display));
+	memset(&chip8.display[0], false, chip8.display.size());
 
 	// Set Program Counter to correct location at start
 	chip8.PC = entry_point;		// location of where programs expect PC to be at 
