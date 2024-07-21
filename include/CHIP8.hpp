@@ -36,7 +36,7 @@ struct config_t
 struct registers_t
 {
 	uint16_t I;		 // index register
-	uint8_t V[0x10]; // V0-VF registers
+	uint8_t V[16]; // V0-VF registers
 
 };
 
@@ -62,6 +62,9 @@ struct chip8_t
 	instruction_t inst;		// Currently running opcode
 	registers_t regs;
 	uint8_t status;
+	bool keypad[16];
+	uint8_t delay_timer;
+	uint8_t sound_timer;
 	bool draw;
 };
 
@@ -75,7 +78,7 @@ void init_config(config_t& config)
 		.scale_factor = 20,
 		.fg_color = 0xFF0000FF, // white
 		.bg_color = 0x00000000, // black
-		.rom_name = "ROM/5-quirks.ch8"
+		.rom_name = "ROM/Tetris.ch8"
 	};
 	
 }
@@ -224,6 +227,18 @@ void update_screen(sfml_t& sfml, const config_t& config, chip8_t& chip8)
 	sfml.window.display();
 }
 
+// Handle user input
+// CHIP8 Keypad
+// QWERTY keyboard
+/*
+*  CHIP8	   QWERTY
+* 
+*	123C		1234
+*	456D		QWER
+*	789E		ASDF
+*	A0BF		ZXCV
+*/
+
 void user_input(sfml_t& sfml, chip8_t& chip8)
 {
 	sf::Event event;
@@ -248,8 +263,57 @@ void user_input(sfml_t& sfml, chip8_t& chip8)
 
 			case sf::Keyboard::Space:
 				chip8.status = PAUSE;
-				
 				break;
+
+			/* Map qwerty keys to CHIP8 keypad */
+			case sf::Keyboard::Num1: chip8.keypad[0x1] = true; break;
+			case sf::Keyboard::Num2: chip8.keypad[0x2] = true; break;
+			case sf::Keyboard::Num3: chip8.keypad[0x3] = true; break;
+			case sf::Keyboard::Num4: chip8.keypad[0xC] = true; break;
+			
+			case sf::Keyboard::Q:	 chip8.keypad[0x4] = true; break;
+			case sf::Keyboard::W:	 chip8.keypad[0x5] = true; break;
+			case sf::Keyboard::E:	 chip8.keypad[0x6] = true; break;
+			case sf::Keyboard::R:	 chip8.keypad[0xD] = true; break;
+			
+			case sf::Keyboard::A:	 chip8.keypad[0x7] = true; break;
+			case sf::Keyboard::S:	 chip8.keypad[0x8] = true; break;
+			case sf::Keyboard::D:	 chip8.keypad[0x9] = true; break;
+			case sf::Keyboard::F:	 chip8.keypad[0xE] = true; break;
+
+			case sf::Keyboard::Z:	 chip8.keypad[0xA] = true; break;
+			case sf::Keyboard::X:	 chip8.keypad[0x0] = true; break;
+			case sf::Keyboard::C:	 chip8.keypad[0xB] = true; break;
+			case sf::Keyboard::V:	 chip8.keypad[0xF] = true; break;
+
+			default:
+				break;
+			}
+
+		case sf::Event::KeyReleased:
+			switch (event.key.code)
+			{
+
+			/* Map qwerty keys to CHIP8 keypad */
+			case sf::Keyboard::Num1: chip8.keypad[0x1] = false; break;
+			case sf::Keyboard::Num2: chip8.keypad[0x2] = false; break;
+			case sf::Keyboard::Num3: chip8.keypad[0x3] = false; break;
+			case sf::Keyboard::Num4: chip8.keypad[0xC] = false; break;
+														 
+			case sf::Keyboard::Q:	 chip8.keypad[0x4] = false; break;
+			case sf::Keyboard::W:	 chip8.keypad[0x5] = false; break;
+			case sf::Keyboard::E:	 chip8.keypad[0x6] = false; break;
+			case sf::Keyboard::R:	 chip8.keypad[0xD] = false; break;
+														 
+			case sf::Keyboard::A:	 chip8.keypad[0x7] = false; break;
+			case sf::Keyboard::S:	 chip8.keypad[0x8] = false; break;
+			case sf::Keyboard::D:	 chip8.keypad[0x9] = false; break;
+			case sf::Keyboard::F:	 chip8.keypad[0xE] = false; break;
+														 
+			case sf::Keyboard::Z:	 chip8.keypad[0xA] = false; break;
+			case sf::Keyboard::X:	 chip8.keypad[0x0] = false; break;
+			case sf::Keyboard::C:	 chip8.keypad[0xB] = false; break;
+			case sf::Keyboard::V:	 chip8.keypad[0xF] = false; break;
 
 			default:
 				break;
@@ -283,7 +347,7 @@ void run_single_opcode_d(chip8_t chip8, const config_t config)
 			chip8.inst.opcode, 
 			chip8.PC - 2,
 			chip8.inst.NNN,
-			chip8.stack_ptr - 1);
+			chip8.stack_ptr--);
 		break;
 
 	// 3XNN: if (Vx == NN)
@@ -420,7 +484,11 @@ void run_single_opcode_d(chip8_t chip8, const config_t config)
 		break;
 
 	case 0xB:
-		printf("PC = NNN + V0");
+		printf("<0x%X> PC = 0x%X:  PC = 0x%X + V0\n", chip8.inst.opcode, chip8.PC - 2, chip8.inst.NNN);
+		break;
+
+	case 0xC:
+		printf("<0x%X> PC = 0x%X:  V%X = rand() %% 256 & NN (0x%02X)\n", chip8.inst.opcode, chip8.PC - 2, chip8.regs.V[0], chip8.inst.NN);
 		break;
 
 		/* DXYN:
@@ -438,6 +506,52 @@ void run_single_opcode_d(chip8_t chip8, const config_t config)
 			chip8.inst.N);
 		
 		break;
+
+	case 0xE:
+		// EX9E: Skip next instruction if key in VX is pressed
+		if (chip8.inst.NN == 0x9E)
+		{
+			printf("<0x%X> PC = 0x%X:  Skip next instruction if key in V%X (0x%X) is pressed; Keypad value: %d\n",
+				chip8.inst.opcode,
+				chip8.PC - 2,
+				chip8.inst.X,
+				chip8.regs.V[chip8.inst.X],
+				chip8.keypad[chip8.regs.V[chip8.inst.X]]);
+		}
+
+		// EXA1: Skip next instruction if key in VX is NOT pressed
+		if (chip8.inst.NN == 0xA1)
+		{
+			printf("<0x%X> PC = 0x%X:  Skip next instruction if key in V%X (0x%X) is NOT pressed; Keypad value: %d\n",
+				chip8.inst.opcode,
+				chip8.PC - 2,
+				chip8.inst.X,
+				chip8.regs.V[chip8.inst.X],
+				chip8.keypad[chip8.regs.V[chip8.inst.X]]);
+		}
+		break;
+
+	case 0xF:
+		switch (chip8.inst.NN)
+		{
+			// FX0A: VX = get_key(); Await until a keypress, and store in VX
+		case 0xA:
+			printf("<0x%X> PC = 0x%X:  Await until a key is pressed; store key in V%X\n", chip8.inst.opcode, chip8.PC - 2, chip8.inst.X);
+			break;
+
+			// FX1E: I += VX; Add Vx to register I. For non-Amiga CHIP8, does not affect VF
+		case 0x1E:
+			printf("<0x%X> PC = 0x%X:  I += V%X (0x%X += 0x%X)\n", 
+				chip8.inst.opcode, 
+				chip8.PC - 2, 
+				chip8.inst.X, 
+				chip8.regs.I, 
+				chip8.regs.V[chip8.inst.X]);
+
+			break;
+		default:
+			break;
+		}
 
 	default:
 		printf("<0x%X> PC = 0x%X:  Unimpletmented opcode 0x%X\n", chip8.inst.opcode, chip8.PC - 2, chip8.inst.opcode);
@@ -466,6 +580,7 @@ void run_single_opcode(chip8_t& chip8, const config_t& config, sfml_t& sfml)
 	uint32_t Y_coord;		// Used for DXYN
 	uint8_t  orig_X;		// Used for DXYN
 	bool carry;
+	bool any_key_press;
 
 	switch ((chip8.inst.opcode >> 12) & 0xF)
 	{
@@ -660,6 +775,65 @@ void run_single_opcode(chip8_t& chip8, const config_t& config, sfml_t& sfml)
 
 		break;
 
+	case 0xE:
+		// EX9E: Skip next instruction if key in VX is pressed
+		if (chip8.inst.NN == 0x9E)
+		{
+			if (chip8.keypad[chip8.regs.V[chip8.inst.X]])
+				chip8.PC += 2;
+		}
+
+		// EXA1: Skip next instruction if key in VX is NOT pressed
+		if (chip8.inst.NN == 0xA1)
+		{
+			if (!chip8.keypad[chip8.regs.V[chip8.inst.X]])
+				chip8.PC += 2;
+		}
+		break;
+
+	case 0xF:
+		switch (chip8.inst.NN)
+		{
+		// FX0A: VX = get_key(); Await until a keypress, and store in VX
+		case 0xA:
+			any_key_press = false;
+			for (size_t i = 0; i < sizeof(chip8.keypad); i++)
+			{
+				if (chip8.keypad[i])
+				{
+					chip8.regs.V[chip8.inst.X] = i; // i = key (offset of keypad)
+					any_key_press = true;
+					break;
+				}
+			}
+			// if no keypad has been pressed: Key getting the current opcode and running this instruction
+			if (!any_key_press) chip8.PC -= 2; 
+			break;
+
+		// FX1E: I += VX; Add Vx to register I. For non-Amiga CHIP8, does not affect VF
+		case 0x1E:
+			chip8.regs.I += chip8.regs.V[chip8.inst.X];
+			break;
+		
+		// FX07: Vx = delay timer
+		case 0x07:
+			chip8.regs.V[chip8.inst.X] = chip8.delay_timer;
+			break;
+			
+		// FX15: delay timer = Vx
+		case 0x15:
+			chip8.delay_timer = chip8.regs.V[chip8.inst.X];
+			break;
+
+		// FX18: sound timer = Vx
+		case 0x18:
+			chip8.sound_timer = chip8.regs.V[chip8.inst.X];
+			break;
+
+		default:
+			break;
+		}
+		break;
 	
 	default:
 		break;
