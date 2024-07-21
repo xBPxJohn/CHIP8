@@ -18,8 +18,6 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 	
-	//printMemoryHex(chip8.ram + 512, 4096);
-
 	chip8.draw = true;
 	
 	srand(time(NULL)); // Get seed for random number

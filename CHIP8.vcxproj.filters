@@ -23,5 +23,11 @@
     <ClInclude Include="include\CHIP8.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\init.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\structs.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
