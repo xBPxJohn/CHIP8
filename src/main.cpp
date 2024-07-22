@@ -5,8 +5,20 @@
 
 int main(int argc, char* argv[])
 {
+#ifdef DEBUG_OFF
+	if (argc < 2)
+	{
+		printf("Usage: PROGAME --rom-name\n-h for help\n");
+		return -1;
+	}
+#endif
+
 	config_t config{ 0 };
-	init_config(config);
+	if (!init_config(config, argc, argv))
+	{
+		return -1;
+	}
+		
 
 	sfml_t sfml;
 	init_sfml(sfml, config);

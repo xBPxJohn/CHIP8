@@ -1,7 +1,7 @@
 #pragma once
 
 
-void init_config(config_t& config)
+bool init_config(config_t& config, const unsigned argc, char* argv[])
 {
 	// Default settings
 	config =
@@ -11,9 +11,37 @@ void init_config(config_t& config)
 		.scale_factor = 20,
 		.fg_color = 0xFF0000FF, // white
 		.bg_color = 0x00000000, // black
-		.rom_name = "ROM/3-corax+.ch8"
+#ifdef DEBUG_ON
+		.rom_name = "ROM/pong2.ch8"
+#endif
 	};
 
+	// Change config based off flags
+	for (size_t i = 1; i < argc; i++)
+	{
+		std::string arg = argv[i];
+
+		if (arg == "--help" || arg == "-h" && i < argc)
+		{
+			printf("Usage: PROGAME --rom-name\n-h: help\n--rom-name/-rom: Load rom\n--scale-factor/-sf: scale factor * CHIP8 resolution (64x32 * scale_factor)\n");
+			return false;
+		}
+
+		if (arg == "--rom-name" || arg == "-rom" && i < argc)
+		{
+			config.rom_name = argv[i + 1];
+			i++; // Skip the next argument (the value of --rom-name)
+		}
+
+		if (arg == "--scale-factor" || arg == "-sf" && i < argc)
+		{
+			config.scale_factor = std::stoi(argv[i + 1]);
+			i++; // Skip the next argument (the value of --rom-name)
+		}
+
+	}
+	
+	
 }
 
 bool init_sfml(sfml_t& sfml, const config_t& config)

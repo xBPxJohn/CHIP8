@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <memory>
 #include <fstream>
+#include <string>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
